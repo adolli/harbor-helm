@@ -22,6 +22,13 @@ spec:
 {{ include "harbor.labels" . | indent 8 }}
         component: registry
       annotations:
+        {{- if .Values.metrics.enabled }}
+        # metrics
+        prometheus.io/scape: "true"
+        prometheus.io/port: {{ .Values.metrics.registry.port | quote }}
+        prometheus.io/path: {{ .Values.metrics.registry.path | quote }} 
+        {{- end }}
+
         checksum/configmap: {{ include (print $.Template.BasePath "/registry/registry-cm.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/registry/registry-secret.yaml") . | sha256sum }}
         checksum/secret-jobservice: {{ include (print $.Template.BasePath "/jobservice/jobservice-secrets.yaml") . | sha256sum }}
@@ -94,6 +101,8 @@ spec:
         ports:
         - containerPort: {{ template "harbor.registry.containerPort" . }}
         - containerPort: 5001
+        - name: metrics
+          containerPort: {{ .Values.metrics.registry.port }}
         volumeMounts:
         - name: registry-data
           mountPath: {{ .Values.persistence.imageChartStorage.filesystem.rootdirectory }}

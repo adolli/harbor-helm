@@ -18,6 +18,9 @@ spec:
 {{ include "harbor.labels" . | indent 8 }}
         component: exporter
       annotations:
+        prometheus.io/scape: "true"
+        prometheus.io/port: {{ .Values.metrics.exporter.port | quote }}
+        prometheus.io/path: {{ .Values.metrics.exporter.path | quote }} 
 {{- if .Values.exporter.podAnnotations }}
 {{ toYaml .Values.exporter.podAnnotations | indent 8 }}
 {{- end }}
@@ -36,6 +39,9 @@ spec:
       - name: exporter
         image: {{ .Values.exporter.image.repository }}:{{ .Values.exporter.image.tag }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.metrics.exporter.port }}
         livenessProbe:
           httpGet:
             path: /
