@@ -436,6 +436,8 @@ core:
   xsrfKey: ""
 
 jobservice:
+  # kind only StatefulSet or "" (empty string indicate Deployment)
+  kind: "" 
   image:
     repository: goharbor/harbor-jobservice
     tag: v2.2.2

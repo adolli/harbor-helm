@@ -1,28 +1,45 @@
-{{- if eq .Values.jobservice.kind "" }}
+{{- $jobservice := .Values.persistence.persistentVolumeClaim.jobservice -}}
 
-apiVersion: apps/v1
-kind: Deployment
+{{- if eq .Values.jobservice.kind "StatefulSet" }}
+
+apiVersion: v1
+kind: Service
 metadata:
-  name: "{{ template "harbor.jobservice" . }}"
+  name: {{ template "harbor.jobservice" . }}-headless
+  labels:
+{{ include "harbor.labels" . | indent 4 }}
+    component: jobservice 
+spec:
+  ports:
+  - port: 80
+    name: http 
+  clusterIP: None
+  selector:
+    component: jobservice
+    kind: sts 
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "harbor.jobservice" . }}
   labels:
 {{ include "harbor.labels" . | indent 4 }}
     component: jobservice
+    kind: sts
 spec:
-  replicas: {{ .Values.jobservice.replicas }}
-  strategy:
-    type: {{ .Values.updateStrategy.type }}
-    {{- if eq .Values.updateStrategy.type "Recreate" }}
-    rollingUpdate: null
-    {{- end }}
+  serviceName: {{ template "harbor.jobservice" . }}-headless
+  replicas: {{ .Values.jobservice.replicas }} 
+  podManagementPolicy: "Parallel"
   selector:
     matchLabels:
-{{ include "harbor.matchLabels" . | indent 6 }}
       component: jobservice
+      kind: sts 
   template:
     metadata:
       labels:
-{{ include "harbor.labels" . | indent 8 }}
         component: jobservice
+        kind: sts 
       annotations:
         checksum/configmap: {{ include (print $.Template.BasePath "/jobservice/jobservice-cm.yaml") . | sha256sum }}
         checksum/configmap-env: {{ include (print $.Template.BasePath "/jobservice/jobservice-cm-env.yaml") . | sha256sum }}
@@ -33,6 +50,7 @@ spec:
 {{- else if and .Values.internalTLS.enabled (eq .Values.internalTLS.certSource "manual") }}
         checksum/tls: {{ include (print $.Template.BasePath "/jobservice/jobservice-tls.yaml") . | sha256sum }}
 {{- end }}
+
 {{- if .Values.jobservice.podAnnotations }}
 {{ toYaml .Values.jobservice.podAnnotations | indent 8 }}
 {{- end }}
@@ -48,6 +66,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       automountServiceAccountToken: false
+
       containers:
       - name: jobservice
         image: {{ .Values.jobservice.image.repository }}:{{ .Values.jobservice.image.tag }}
@@ -88,9 +107,9 @@ spec:
           {{- end }}
         envFrom:
         - configMapRef:
-            name: "{{ template "harbor.jobservice" . }}-env"
+            name: {{ template "harbor.jobservice" . }}-env
         - secretRef:
-            name: "{{ template "harbor.jobservice" . }}"
+            name: {{ template "harbor.jobservice" . }}
         ports:
         - containerPort: {{ template "harbor.jobservice.containerPort" . }}
         volumeMounts:
@@ -110,14 +129,7 @@ spec:
       volumes:
       - name: jobservice-config
         configMap:
-          name: "{{ template "harbor.jobservice" . }}"
-      - name: job-logs
-        {{- if and .Values.persistence.enabled (has "file" .Values.jobservice.jobLoggers) }}
-        persistentVolumeClaim:
-          claimName: {{ .Values.persistence.persistentVolumeClaim.jobservice.existingClaim | default (include "harbor.jobservice" .) }}
-        {{- else }}
-        emptyDir: {}
-        {{- end }}
+          name: {{ template "harbor.jobservice" . }}
       {{- if .Values.internalTLS.enabled }}
       - name: jobservice-internal-certs
         secret:
@@ -139,4 +151,29 @@ spec:
 {{ toYaml . | indent 8 }}
     {{- end }}
 
+  volumeClaimTemplates:
+  - metadata:
+      name: job-logs 
+      {{- if eq .Values.persistence.resourcePolicy "keep" }}
+      annotations:
+        helm.sh/resource-policy: keep
+      {{- end }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+      resources:
+        requests:
+          storage: {{ $jobservice.size }}
+      {{- if $jobservice.storageClass }}
+        {{- if eq "-" $jobservice.storageClass }}
+      storageClassName: ""
+        {{- else }}
+      storageClassName: {{ $jobservice.storageClass }}
+        {{- end }}
+      {{- end }}
+
+
 {{- end }}
+
