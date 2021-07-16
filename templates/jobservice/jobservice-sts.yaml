@@ -16,7 +16,6 @@ spec:
   clusterIP: None
   selector:
     component: jobservice
-    kind: sts 
 
 ---
 apiVersion: apps/v1
@@ -34,12 +33,11 @@ spec:
   selector:
     matchLabels:
       component: jobservice
-      kind: sts 
   template:
     metadata:
       labels:
+{{ include "harbor.labels" . | indent 8 }}
         component: jobservice
-        kind: sts 
       annotations:
         checksum/configmap: {{ include (print $.Template.BasePath "/jobservice/jobservice-cm.yaml") . | sha256sum }}
         checksum/configmap-env: {{ include (print $.Template.BasePath "/jobservice/jobservice-cm-env.yaml") . | sha256sum }}
