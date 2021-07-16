@@ -18,7 +18,7 @@ spec:
 {{ include "harbor.labels" . | indent 8 }}
         component: exporter
       annotations:
-        prometheus.io/scape: "true"
+        prometheus.io/scrape: "true"
         prometheus.io/port: {{ .Values.metrics.exporter.port | quote }}
         prometheus.io/path: {{ .Values.metrics.exporter.path | quote }} 
 {{- if .Values.exporter.podAnnotations }}
@@ -64,8 +64,6 @@ spec:
         resources:
 {{ toYaml .Values.exporter.resources | indent 10 }}
 {{- end }}
-        ports:
-        - containerPort: {{ template "harbor.core.containerPort" . }}
         volumeMounts:
         {{- if .Values.caBundleSecretName }}
 {{ include "harbor.caBundleVolumeMount" . | indent 8 }}

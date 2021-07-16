@@ -24,7 +24,7 @@ spec:
       annotations:
         {{- if .Values.metrics.enabled }}
         # metrics
-        prometheus.io/scape: "true"
+        prometheus.io/scrape: "true"
         prometheus.io/port: {{ .Values.metrics.registry.port | quote }}
         prometheus.io/path: {{ .Values.metrics.registry.path | quote }} 
         {{- end }}

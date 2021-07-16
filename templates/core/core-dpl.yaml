@@ -18,7 +18,7 @@ spec:
         component: core
       annotations:
         {{- if .Values.metrics.enabled }}
-        prometheus.io/scape: "true"
+        prometheus.io/scrape: "true"
         prometheus.io/port: {{ .Values.metrics.core.port | quote }}
         prometheus.io/path: {{ .Values.metrics.core.path | quote }} 
         {{- end }}
